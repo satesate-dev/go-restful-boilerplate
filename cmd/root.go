@@ -18,32 +18,28 @@ package cmd
 import (
 	"database/sql"
 	"fmt"
+	"log"
 	"os"
+
+	"github.com/satesate-dev/go-restful-boilerplate/util"
 
 	"github.com/satesate-dev/go-restful-boilerplate/helper/database"
 	"github.com/spf13/cobra"
 
-	homedir "github.com/mitchellh/go-homedir"
+	_ "github.com/lib/pq"
 	"github.com/spf13/viper"
 )
 
 var (
 	cfgFile string
 	DBPool  *sql.DB
+	logger  *util.Logger
 )
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
 	Use:   "go-restful-boilerplate",
 	Short: "A brief description of your application",
-	Long: `
-██╗  ██╗ █████╗  ██████╗██╗  ██╗████████╗ ██████╗ ██████╗ ███████╗██████╗ ███████╗███████╗███████╗████████╗
-██║  ██║██╔══██╗██╔════╝██║ ██╔╝╚══██╔══╝██╔═══██╗██╔══██╗██╔════╝██╔══██╗██╔════╝██╔════╝██╔════╝╚══██╔══╝
-███████║███████║██║     █████╔╝    ██║   ██║   ██║██████╔╝█████╗  ██████╔╝█████╗  █████╗  ███████╗   ██║   
-██╔══██║██╔══██║██║     ██╔═██╗    ██║   ██║   ██║██╔══██╗██╔══╝  ██╔══██╗██╔══╝  ██╔══╝  ╚════██║   ██║   
-██║  ██║██║  ██║╚██████╗██║  ██╗   ██║   ╚██████╔╝██████╔╝███████╗██║  ██║██║     ███████╗███████║   ██║   
-╚═╝  ╚═╝╚═╝  ╚═╝ ╚═════╝╚═╝  ╚═╝   ╚═╝    ╚═════╝ ╚═════╝ ╚══════╝╚═╝  ╚═╝╚═╝     ╚══════╝╚══════╝   ╚═╝
-`,
 	// Uncomment the following line if your bare application
 	// has an action associated with it:
 	Run: func(cmd *cobra.Command, args []string) {},
@@ -56,18 +52,16 @@ func Execute() {
 		fmt.Println(err)
 		os.Exit(1)
 	}
-	fmt.Println(DBPool.Ping())
-	defer DBPool.Close()
 }
 
 func init() {
-	cobra.OnInitialize(initConfig, initDatabase)
+	cobra.OnInitialize(initConfig, initLoad)
 
 	// Here you will define your flags and configuration settings.
 	// Cobra supports persistent flags, which, if defined here,
 	// will be global for your application.
 
-	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.config.toml)")
+	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/..config.toml)")
 
 	// Cobra also supports local flags, which will only run
 	// when this action is called directly.
@@ -76,28 +70,25 @@ func init() {
 
 // initConfig reads in config file and ENV variables if set.
 func initConfig() {
-	if cfgFile != "" {
-		// Use config file from the flag.
-		viper.SetConfigFile(cfgFile)
-	} else {
-		// Find home directory.
-		home, err := homedir.Dir()
-		if err != nil {
-			fmt.Println(err)
-			os.Exit(1)
-		}
-
-		// Search config in home directory with name ".go-restful-boilerplate" (without extension).
-		viper.AddConfigPath(home)
-		viper.SetConfigName(".config")
-	}
+	viper.SetConfigType("toml")
+	// Search config in root directory with name "..config.toml" (without extension).
+	viper.AddConfigPath(".")
+	viper.SetConfigName(".config")
 
 	viper.AutomaticEnv() // read in environment variables that match
 
 	// If a config file is found, read it in.
 	if err := viper.ReadInConfig(); err == nil {
 		fmt.Println("Using config file:", viper.ConfigFileUsed())
+	} else {
+		log.Fatal("Config file not found")
 	}
+}
+
+func initLoad() {
+	splash()
+	initLogger()
+	initDatabase()
 }
 
 func initDatabase() {
@@ -121,6 +112,25 @@ func initDatabase() {
 	var err error
 	DBPool, err = dbConfig.Connect()
 	if err != nil {
-		panic(err)
+		logger.Err.Fatalf("invalid db config : %v", err)
 	}
+	// Checking database connection
+	if err := DBPool.Ping(); err != nil {
+		logger.Err.Fatalf("failed connect to db : %v", err)
+	}
+}
+
+func initLogger() {
+	logger = util.NewLogger()
+}
+
+func splash() {
+	fmt.Println(`
+	██╗  ██╗ █████╗  ██████╗██╗  ██╗████████╗ ██████╗ ██████╗ ███████╗██████╗ ███████╗███████╗███████╗████████╗
+	██║  ██║██╔══██╗██╔════╝██║ ██╔╝╚══██╔══╝██╔═══██╗██╔══██╗██╔════╝██╔══██╗██╔════╝██╔════╝██╔════╝╚══██╔══╝
+	███████║███████║██║     █████╔╝    ██║   ██║   ██║██████╔╝█████╗  ██████╔╝█████╗  █████╗  ███████╗   ██║
+	██╔══██║██╔══██║██║     ██╔═██╗    ██║   ██║   ██║██╔══██╗██╔══╝  ██╔══██╗██╔══╝  ██╔══╝  ╚════██║   ██║
+	██║  ██║██║  ██║╚██████╗██║  ██╗   ██║   ╚██████╔╝██████╔╝███████╗██║  ██║██║     ███████╗███████║   ██║
+	╚═╝  ╚═╝╚═╝  ╚═╝ ╚═════╝╚═╝  ╚═╝   ╚═╝    ╚═════╝ ╚═════╝ ╚══════╝╚═╝  ╚═╝╚═╝     ╚══════╝╚══════╝   ╚═╝
+	`)
 }
