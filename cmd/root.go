@@ -16,16 +16,21 @@ limitations under the License.
 package cmd
 
 import (
+	"database/sql"
 	"fmt"
 	"os"
 
+	"github.com/satesate-dev/go-restful-boilerplate/helper/database"
 	"github.com/spf13/cobra"
 
 	homedir "github.com/mitchellh/go-homedir"
 	"github.com/spf13/viper"
 )
 
-var cfgFile string
+var (
+	cfgFile string
+	DBPool  *sql.DB
+)
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
@@ -41,7 +46,7 @@ var rootCmd = &cobra.Command{
 `,
 	// Uncomment the following line if your bare application
 	// has an action associated with it:
-	//	Run: func(cmd *cobra.Command, args []string) { },
+	Run: func(cmd *cobra.Command, args []string) {},
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.
@@ -51,10 +56,12 @@ func Execute() {
 		fmt.Println(err)
 		os.Exit(1)
 	}
+	fmt.Println(DBPool.Ping())
+	defer DBPool.Close()
 }
 
 func init() {
-	cobra.OnInitialize(initConfig)
+	cobra.OnInitialize(initConfig, initDatabase)
 
 	// Here you will define your flags and configuration settings.
 	// Cobra supports persistent flags, which, if defined here,
@@ -82,7 +89,7 @@ func initConfig() {
 
 		// Search config in home directory with name ".go-restful-boilerplate" (without extension).
 		viper.AddConfigPath(home)
-		viper.SetConfigName(".config.toml")
+		viper.SetConfigName(".config")
 	}
 
 	viper.AutomaticEnv() // read in environment variables that match
@@ -90,5 +97,30 @@ func initConfig() {
 	// If a config file is found, read it in.
 	if err := viper.ReadInConfig(); err == nil {
 		fmt.Println("Using config file:", viper.ConfigFileUsed())
+	}
+}
+
+func initDatabase() {
+
+	//Setup DB Connection
+	dbConfig := database.NewDatabase(
+		viper.GetString("database.db"),
+		viper.GetString("database.username"),
+		viper.GetString("database.password"),
+		viper.GetString("database.host"),
+		viper.GetString("database.port"),
+		viper.GetString("database.name"),
+		viper.GetString("database.timezone"),
+		viper.GetString("database.ssl_mode"),
+		viper.GetString("database.ssl_cert"),
+		viper.GetString("database.ssl_key"),
+		viper.GetString("database.ssl_root_cert"),
+	)
+
+	// Connect to DB
+	var err error
+	DBPool, err = dbConfig.Connect()
+	if err != nil {
+		panic(err)
 	}
 }
