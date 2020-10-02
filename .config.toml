@@ -1,0 +1,12 @@
+[app]
+version = "0.0.1-alpha"
+
+[database]
+db = "postgres"
+host = "localhost"
+port = "5432"
+name = "yourdb"
+username = "postgres"
+password = "yourpassword"
+timezone = "UTC"
+ssl_mode = "disable"
