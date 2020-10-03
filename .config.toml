@@ -10,3 +10,8 @@ username = "postgres"
 password = "yourpassword"
 timezone = "UTC"
 ssl_mode = "disable"
+
+[redis]
+host = "localhost:6379"
+password = ""
+db = 0
