@@ -21,6 +21,7 @@ import (
 	"log"
 	"os"
 
+	"github.com/go-redis/redis/v7"
 	"github.com/satesate-dev/go-restful-boilerplate/util"
 
 	"github.com/satesate-dev/go-restful-boilerplate/helper/database"
@@ -31,9 +32,10 @@ import (
 )
 
 var (
-	cfgFile string
-	DBPool  *sql.DB
-	logger  *util.Logger
+	cfgFile     string
+	DBPool      *sql.DB
+	logger      *util.Logger
+	redisClient *redis.Client
 )
 
 // rootCmd represents the base command when called without any subcommands
@@ -89,6 +91,7 @@ func initLoad() {
 	splash()
 	initLogger()
 	initDatabase()
+	initRedis()
 }
 
 func initDatabase() {
@@ -133,4 +136,17 @@ func splash() {
 	██║  ██║██║  ██║╚██████╗██║  ██╗   ██║   ╚██████╔╝██████╔╝███████╗██║  ██║██║     ███████╗███████║   ██║
 	╚═╝  ╚═╝╚═╝  ╚═╝ ╚═════╝╚═╝  ╚═╝   ╚═╝    ╚═════╝ ╚═════╝ ╚══════╝╚═╝  ╚═╝╚═╝     ╚══════╝╚══════╝   ╚═╝
 	`)
+}
+
+func initRedis() {
+	redisClient = redis.NewClient(&redis.Options{
+		Addr:     viper.GetString("redis.host"),
+		Password: viper.GetString("redis.password"),
+		DB:       viper.GetInt("redis.db"),
+	})
+
+	// Checking redis connection
+	if _, err := redisClient.Ping().Result(); err != nil {
+		logger.Err.Fatalf("failed connect to redis : %v", err)
+	}
 }
