@@ -19,7 +19,15 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
+	"net/http"
 	"os"
+	"time"
+
+	"github.com/satesate-dev/go-restful-boilerplate/user"
+
+	"github.com/satesate-dev/go-restful-boilerplate/user/endpoint"
+
+	"github.com/gorilla/mux"
 
 	"github.com/go-redis/redis/v7"
 	"github.com/satesate-dev/go-restful-boilerplate/util"
@@ -32,19 +40,40 @@ import (
 )
 
 var (
-	cfgFile     string
-	DBPool      *sql.DB
-	logger      *util.Logger
-	redisClient *redis.Client
+	cfgFile   string
+	DBPool    *sql.DB
+	logger    *util.Logger
+	redisPool *redis.Client
 )
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
 	Use:   "go-restful-boilerplate",
 	Short: "A brief description of your application",
+	PreRun: func(cmd *cobra.Command, args []string) {
+		user.Init(DBPool, redisPool)
+	},
 	// Uncomment the following line if your bare application
 	// has an action associated with it:
-	Run: func(cmd *cobra.Command, args []string) {},
+	Run: func(cmd *cobra.Command, args []string) {
+		r := mux.NewRouter()
+		http.Handle("/", r)
+		routerV1 := r.PathPrefix("/api/v1").Subrouter()
+		endpoint.NewUserEndpoint(routerV1)
+
+		srv := &http.Server{
+			Addr:         fmt.Sprintf(":%d", viper.GetInt("server.port")),
+			ReadTimeout:  time.Duration(viper.GetInt("server.read_timeout")) * time.Second,
+			WriteTimeout: time.Duration(viper.GetInt("server.write_timeout")) * time.Second,
+			Handler:      r,
+		}
+
+		logger.Out.Infof("Server starting on port %v", srv.Addr)
+		if err := srv.ListenAndServe(); err == nil {
+			logger.Err.Fatalf("Failed start http server : %v", err)
+		}
+
+	},
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.
@@ -139,14 +168,14 @@ func splash() {
 }
 
 func initRedis() {
-	redisClient = redis.NewClient(&redis.Options{
+	redisPool = redis.NewClient(&redis.Options{
 		Addr:     viper.GetString("redis.host"),
 		Password: viper.GetString("redis.password"),
 		DB:       viper.GetInt("redis.db"),
 	})
 
 	// Checking redis connection
-	if _, err := redisClient.Ping().Result(); err != nil {
+	if _, err := redisPool.Ping().Result(); err != nil {
 		logger.Err.Fatalf("failed connect to redis : %v", err)
 	}
 }
