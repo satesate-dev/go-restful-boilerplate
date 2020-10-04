@@ -33,6 +33,7 @@ import (
 	"github.com/satesate-dev/go-restful-boilerplate/util"
 
 	"github.com/satesate-dev/go-restful-boilerplate/helper/database"
+	"github.com/satesate-dev/go-restful-boilerplate/helper/migration"
 	"github.com/spf13/cobra"
 
 	_ "github.com/lib/pq"
@@ -121,6 +122,7 @@ func initLoad() {
 	initLogger()
 	initDatabase()
 	initRedis()
+	migrate()
 }
 
 func initDatabase() {
@@ -177,5 +179,18 @@ func initRedis() {
 	// Checking redis connection
 	if _, err := redisPool.Ping().Result(); err != nil {
 		logger.Err.Fatalf("failed connect to redis : %v", err)
+	}
+}
+
+func migrate() {
+	migrationInstance := migration.NewMigration(&migration.Config{
+		DBConnection:   DBPool,
+		DBDriver:       viper.GetString("database.db"),
+		MigrationDir:   viper.GetString("migration.dir"),
+		MigrationTable: viper.GetString("migration.table"),
+		RunMigrations:  viper.GetBool("migration.run"),
+	})
+	if err := migrationInstance.Sync(); err != nil {
+		logger.Err.Fatalf("Failed running database migrations. Error: %v", err)
 	}
 }

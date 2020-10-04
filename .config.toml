@@ -20,3 +20,8 @@ ssl_mode = "disable"
 host = "localhost:6379"
 password = ""
 db = 0
+
+[migration]
+dir = "file/migrator"
+table = "migrations"
+run = true

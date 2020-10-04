@@ -1,4 +1,5 @@
-CREATE TABLE "user" (
+-- +migrate Up
+CREATE TABLE IF NOT EXISTS "user" (
     id   UUID NOT NULL DEFAULT gen_random_uuid(),
     name VARCHAR(255) NOT NULL,
     username VARCHAR(100) NOT NULL,
@@ -9,3 +10,6 @@ CREATE TABLE "user" (
     updated_by UUID,
     PRIMARY KEY (id)
 );
+
+-- +migrate Down
+DROP TABLE IF EXISTS "user";

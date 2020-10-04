@@ -6,7 +6,7 @@ require (
 	github.com/go-redis/redis/v7 v7.4.0
 	github.com/gorilla/mux v1.8.0
 	github.com/lib/pq v1.8.0
-	github.com/nsf/gocode v0.0.0-20190302080247-5bee97b48836 // indirect
+	github.com/rubenv/sql-migrate v0.0.0-20200616145509-8d140a17f351
 	github.com/satori/go.uuid v1.2.0
 	github.com/sirupsen/logrus v1.7.0
 	github.com/spf13/cobra v1.0.0
