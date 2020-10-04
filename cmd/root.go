@@ -16,11 +16,14 @@ limitations under the License.
 package cmd
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"log"
 	"net/http"
 	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
 	"github.com/satesate-dev/go-restful-boilerplate/user"
@@ -68,11 +71,27 @@ var rootCmd = &cobra.Command{
 			Handler:      r,
 		}
 
-		logger.Out.Infof("Server starting on port %v", srv.Addr)
-		if err := srv.ListenAndServe(); err == nil {
-			logger.Err.Fatalf("Failed start http server : %v", err)
-		}
+		done := make(chan os.Signal, 1)
+		signal.Notify(done, os.Interrupt, syscall.SIGINT, syscall.SIGTERM)
 
+		go func() {
+			if err := srv.ListenAndServe(); err == nil {
+				logger.Err.Fatalf("Failed start http server : %v", err)
+			}
+		}()
+		logger.Out.Infof("Server started on port %v", srv.Addr)
+
+		<-done
+
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer func() {
+			cancel()
+		}()
+
+		if err := srv.Shutdown(ctx); err != nil {
+			logger.Err.Fatalf("Server Shutdown Failed:%+v", err)
+		}
+		logger.Out.Infof("Server Stopped Gracefully")
 	},
 }
 
