@@ -1,13 +1,18 @@
 [app]
 version = "0.0.1-alpha"
 
+[server]
+port = 1111
+read_time_out = 10
+write_time_out = 10
+
 [database]
 db = "postgres"
 host = "localhost"
-port = "5432"
-name = "yourdb"
-username = "postgres"
-password = "yourpassword"
+port = "26257"
+name = "boilerplate"
+username = "root"
+password = ""
 timezone = "UTC"
 ssl_mode = "disable"
 
