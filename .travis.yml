@@ -1,0 +1,5 @@
+language: go
+go:
+  - go1.14.4
+script:
+  - make build
